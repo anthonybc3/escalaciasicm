@@ -13,6 +13,9 @@ export function UserManager({ appStore }: Props) {
 
   const isAdmin = currentUser?.role === 'ADMIN';
   
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<User>>({});
+  
   // Admin sees all users. Manager sees users from their managed churches.
   const visibleUsers = isAdmin
     ? users
@@ -61,98 +64,168 @@ export function UserManager({ appStore }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {visibleUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-brand-gray flex items-center justify-center text-indigo-700 font-bold">
-                        {user.name.charAt(0).toUpperCase()}
+              {visibleUsers.map((user) => {
+                const isEditing = editingUserId === user.id;
+                
+                return (
+                  <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-brand-gray flex items-center justify-center text-indigo-700 font-bold">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{user.name}</p>
+                          <p className="text-gray-500 text-xs">{user.email || user.username}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{user.name}</p>
-                        <p className="text-gray-500 text-xs">{user.email || user.username}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-1.5 text-gray-600">
+                          <Building2 className="w-4 h-4 text-gray-400" />
+                          {isEditing ? (
+                            <select
+                              value={editForm?.churchId || ''}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, churchId: e.target.value || null }))}
+                              className="bg-white border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-brand-navy focus:border-brand-navy block p-1.5 w-48"
+                            >
+                              <option value="">Sem Igreja Principal</option>
+                              {churches.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="font-medium text-gray-800">{getChurchName(user.churchId)}</span>
+                          )}
+                        </div>
+                        
+                        {/* Outras Igrejas */}
+                        {isEditing ? (
+                          <div className="mt-2 pl-6">
+                            <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">Igrejas Adicionais</p>
+                            <div className="max-h-32 overflow-y-auto space-y-1.5 pr-2 custom-scrollbar">
+                              {churches.map(c => {
+                                // Não mostra a igreja principal nas opções adicionais para evitar confusão
+                                if (c.id === editForm?.churchId) return null;
+                                
+                                const isChecked = editForm?.managedChurchIds?.includes(c.id);
+                                return (
+                                  <label key={c.id} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={isChecked || false}
+                                      onChange={(e) => {
+                                        const current = editForm?.managedChurchIds || [];
+                                        const next = e.target.checked 
+                                          ? [...current, c.id] 
+                                          : current.filter(id => id !== c.id);
+                                        setEditForm(prev => ({ ...prev, managedChurchIds: next }));
+                                      }}
+                                      className="rounded text-brand-navy focus:ring-brand-navy border-gray-300"
+                                    />
+                                    {c.name}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          user.managedChurchIds && user.managedChurchIds.filter(id => id !== user.churchId).length > 0 && (
+                            <div className="pl-6 text-xs text-gray-500">
+                              + {user.managedChurchIds.filter(id => id !== user.churchId).length} igreja(s)
+                            </div>
+                          )
+                        )}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5 text-gray-600">
-                      <Building2 className="w-4 h-4 text-gray-400" />
-                      {isAdmin && user.id !== currentUser?.id ? (
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.status === 'APPROVED' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                          <Check className="w-3 h-3" /> Ativo
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <X className="w-3 h-3" /> Bloqueado
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {isEditing ? (
                         <select
-                          value={user.churchId || ''}
-                          onChange={(e) => {
-                            const newChurchId = e.target.value || null;
-                            updateUser({ 
-                              ...user, 
-                              churchId: newChurchId,
-                              // Se for gestor, garante que a igreja principal esteja na lista de gerenciadas
-                              managedChurchIds: newChurchId && user.role === 'MANAGER' 
-                                ? Array.from(new Set([...(user.managedChurchIds || []), newChurchId]))
-                                : user.managedChurchIds
-                            });
-                          }}
-                          className="bg-white border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-brand-navy focus:border-brand-navy block p-1.5 w-48"
+                          value={editForm?.role}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, role: e.target.value as Role }))}
+                          className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-brand-navy focus:border-brand-navy block p-2"
                         >
-                          <option value="">Sem Igreja</option>
-                          {churches.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
+                          <option value="TEACHER">Professor</option>
+                          <option value="MANAGER">Gestão</option>
+                          <option value="ADMIN">Admin</option>
                         </select>
                       ) : (
-                        getChurchName(user.churchId)
+                        <span className="text-gray-600 font-medium">
+                          {user.role === 'TEACHER' ? 'Professor' : user.role === 'MANAGER' ? 'Gestão' : 'Admin'}
+                        </span>
                       )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {user.status === 'APPROVED' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                        <Check className="w-3 h-3" /> Ativo
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        <X className="w-3 h-3" /> Bloqueado
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {isAdmin && user.id !== currentUser?.id ? (
-                      <select
-                        value={user.role}
-                        onChange={(e) => handleUpdateRole(user, e.target.value as Role)}
-                        className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-brand-navy focus:border-brand-navy block p-2"
-                      >
-                        <option value="TEACHER">Professor</option>
-                        <option value="MANAGER">Gestão</option>
-                        <option value="ADMIN">Admin</option>
-                      </select>
-                    ) : (
-                      <span className="text-gray-600 font-medium">
-                        {user.role === 'TEACHER' ? 'Professor' : user.role === 'MANAGER' ? 'Gestão' : 'Admin'}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    {user.status === 'APPROVED' && user.id !== currentUser?.id && (
-                       <button
-                         onClick={() => handleUpdateStatus(user, 'REJECTED')}
-                         className="text-xs text-red-600 font-medium hover:underline"
-                       >
-                         Bloquear Acesso
-                       </button>
-                    )}
-                     {user.status !== 'APPROVED' && user.id !== currentUser?.id && (
-                       <button
-                         onClick={() => handleUpdateStatus(user, 'APPROVED')}
-                         className="text-xs text-emerald-600 font-medium hover:underline"
-                       >
-                         Restaurar Acesso
-                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {isEditing ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              updateUser({ ...user, ...editForm });
+                              setEditingUserId(null);
+                            }}
+                            className="text-xs bg-brand-navy text-white px-3 py-1.5 rounded-md font-medium hover:bg-brand-darknavy transition-colors"
+                          >
+                            Salvar
+                          </button>
+                          <button
+                            onClick={() => setEditingUserId(null)}
+                            className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-md font-medium hover:bg-gray-200 transition-colors"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-end gap-2">
+                          {isAdmin && user.id !== currentUser?.id && (
+                            <button
+                              onClick={() => {
+                                setEditingUserId(user.id);
+                                setEditForm({
+                                  role: user.role,
+                                  churchId: user.churchId,
+                                  managedChurchIds: user.managedChurchIds || []
+                                });
+                              }}
+                              className="text-xs text-brand-navy font-medium hover:underline"
+                            >
+                              Editar Perfil
+                            </button>
+                          )}
+                          
+                          {user.status === 'APPROVED' && user.id !== currentUser?.id && (
+                             <button
+                               onClick={() => handleUpdateStatus(user, 'REJECTED')}
+                               className="text-xs text-red-600 font-medium hover:underline"
+                             >
+                               Bloquear Acesso
+                             </button>
+                          )}
+                           {user.status !== 'APPROVED' && user.id !== currentUser?.id && (
+                             <button
+                               onClick={() => handleUpdateStatus(user, 'APPROVED')}
+                               className="text-xs text-emerald-600 font-medium hover:underline"
+                             >
+                               Restaurar Acesso
+                             </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
 
               {visibleUsers.length === 0 && (
                 <tr>

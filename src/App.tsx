@@ -87,12 +87,13 @@ export default function App() {
               <div className="hidden sm:flex text-sm text-gray-500 font-medium">
                 {isPublicView ? "Visão Pública" : "Gerenciador de Escala CIAS"}
               </div>
-              {!isPublicView && (isAdmin || isManager) && availableChurches.length > 0 && (
+              {!isPublicView && availableChurches.length > 0 && (
                 <div className="flex items-center mx-2">
                   <select
                     value={effectiveChurchId || ''}
                     onChange={(e) => setActiveChurchId(e.target.value)}
                     className="block w-36 sm:w-48 pl-2 pr-8 py-1.5 text-sm border-gray-300 rounded-md shadow-sm focus:ring-brand-navy focus:border-brand-navy bg-gray-50 text-gray-700 font-medium border"
+                    disabled={availableChurches.length <= 1}
                   >
                     {!effectiveChurchId && <option value="" disabled>Selecione...</option>}
                     {availableChurches.map(c => (

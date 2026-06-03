@@ -67,27 +67,7 @@ export default function App() {
 
   const isTeacher = currentUser?.role === "TEACHER" || isPublicView;
 
-  if (currentUser?.status === 'PENDING') {
-    return (
-      <div className="min-h-screen bg-brand-cream flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-          <Shield className="mx-auto h-12 w-12 text-brand-navy mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Conta em Análise</h2>
-          <p className="text-gray-600 mb-6">
-            Sua conta foi criada com sucesso, mas o administrador ou gestor da sua igreja ainda precisa aprovar seu acesso. Por favor, aguarde.
-          </p>
-          <button onClick={logout} className="text-brand-navy font-medium hover:text-brand-darknavy">
-            Sair e voltar ao Login
-          </button>
-        </div>
-      </div>
-    );
-  }
 
-  const pendingUsersCount = appStore.users.filter(u => 
-    u.status === 'PENDING' && 
-    (isAdmin || (u.churchId && currentUser?.managedChurchIds?.includes(u.churchId)))
-  ).length;
 
   return (
     <div className="min-h-screen bg-brand-cream text-gray-900 font-sans selection:bg-brand-navy/20 selection:text-brand-navy">
@@ -198,11 +178,6 @@ export default function App() {
               >
                 <Shield className="w-4 h-4" />
                 Gerenciar Acessos
-                {pendingUsersCount > 0 && (
-                  <span className="ml-1 bg-amber-100 text-amber-700 py-0.5 px-2 rounded-full text-xs font-bold">
-                    {pendingUsersCount}
-                  </span>
-                )}
               </button>
             )}
 
@@ -238,28 +213,6 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {!isPublicView && pendingUsersCount > 0 && activeTab !== 'users' && (
-          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="flex items-center gap-3 text-amber-800">
-              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
-                <Users className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm">Pendências de Acesso</h3>
-                <p className="text-xs text-amber-700 mt-0.5">
-                  Você tem {pendingUsersCount} {pendingUsersCount === 1 ? 'usuário aguardando' : 'usuários aguardando'} aprovação.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setActiveTab('users')}
-              className="text-sm font-medium bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors shadow-sm"
-            >
-              Revisar Agora
-            </button>
-          </div>
-        )}
-
         {activeTab === "schedule" && (
           <ScheduleManager
             teachers={churchTeachers}

@@ -106,19 +106,13 @@ export function UserManager({ appStore }: Props) {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    {user.status === 'APPROVED' && (
+                    {user.status === 'APPROVED' ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                        <Check className="w-3 h-3" /> Aprovado
+                        <Check className="w-3 h-3" /> Ativo
                       </span>
-                    )}
-                    {user.status === 'PENDING' && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                        <ShieldAlert className="w-3 h-3" /> Pendente
-                      </span>
-                    )}
-                    {user.status === 'REJECTED' && (
+                    ) : (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        <X className="w-3 h-3" /> Rejeitado
+                        <X className="w-3 h-3" /> Bloqueado
                       </span>
                     )}
                   </td>
@@ -140,33 +134,15 @@ export function UserManager({ appStore }: Props) {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {user.status === 'PENDING' && (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleUpdateStatus(user, 'APPROVED')}
-                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
-                          title="Aprovar"
-                        >
-                          <Check className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStatus(user, 'REJECTED')}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Rejeitar"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                    )}
                     {user.status === 'APPROVED' && user.id !== currentUser?.id && (
                        <button
                          onClick={() => handleUpdateStatus(user, 'REJECTED')}
                          className="text-xs text-red-600 font-medium hover:underline"
                        >
-                         Revogar Acesso
+                         Bloquear Acesso
                        </button>
                     )}
-                     {user.status === 'REJECTED' && user.id !== currentUser?.id && (
+                     {user.status !== 'APPROVED' && user.id !== currentUser?.id && (
                        <button
                          onClick={() => handleUpdateStatus(user, 'APPROVED')}
                          className="text-xs text-emerald-600 font-medium hover:underline"

@@ -153,7 +153,7 @@ export function Login({ onLogin, appStore }: Props) {
           role: regRole,
           church_id: regChurchId || null,
           managed_church_ids: regRole === 'MANAGER' && regChurchId ? [regChurchId] : null,
-          status: 'PENDING'
+          status: 'APPROVED'
         }
       ]);
       if (profileError) {
@@ -163,13 +163,13 @@ export function Login({ onLogin, appStore }: Props) {
 
     setIsLoading(false);
     setSuccessMsg(
-      "Cadastro realizado com sucesso! Você já pode fazer login e aguardar a aprovação do administrador.",
+      "Cadastro realizado com sucesso! Faça login para acessar o sistema.",
     );
     setTimeout(() => {
       setUsername(regEmail);
       setPassword("");
       setView("login");
-      setSuccessMsg("Cadastro concluído. Os administradores irão revisar seu acesso em breve.");
+      setSuccessMsg("Cadastro concluído com sucesso.");
     }, 2500);
   };
 

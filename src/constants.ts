@@ -8,6 +8,7 @@ export const CLASSES: ClassInfo[] = [
     color: "bg-[#89CFF0]/20 border-[#89CFF0]/40",
     textColor: "text-[#56a5c9]",
   },
+
   {
     id: "criancas",
     name: "Crianças",

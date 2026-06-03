@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { Teacher, Class, MonthlySchedule, User, Church } from "../types";
+import { generateId } from "../lib/utils";
 
 export function useAppStore() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -130,6 +131,30 @@ export function useAppStore() {
       }
       return { success: false, error: 'Erro ao adicionar a igreja no servidor.' };
     }
+
+    // Criar as classes padrão
+    const defaultClasses: Class[] = [
+      { id: generateId(), churchId: church.id, name: 'Bebês 0 a 3', dayOfWeek: 0, isActive: true },
+      { id: generateId(), churchId: church.id, name: 'Crianças', dayOfWeek: 0, isActive: true },
+      { id: generateId(), churchId: church.id, name: 'Intermediários', dayOfWeek: 0, isActive: true },
+      { id: generateId(), churchId: church.id, name: 'Adolescentes', dayOfWeek: 0, isActive: true },
+    ];
+
+    setClasses(prev => [...prev, ...defaultClasses]);
+    
+    const classesToInsert = defaultClasses.map(c => ({
+      id: c.id,
+      church_id: c.churchId,
+      name: c.name,
+      day_of_week: c.dayOfWeek,
+      is_active: c.isActive
+    }));
+
+    const { error: classesError } = await supabase.from('classes').insert(classesToInsert);
+    if (classesError) {
+      console.error("Error adding default classes:", classesError);
+    }
+
     return { success: true };
   };
   const updateChurch = async (updated: Church) => {

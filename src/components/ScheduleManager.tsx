@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Teacher, Class, MonthlySchedule, ClassSchedule } from "../types";
 import { DAYS_OF_WEEK, MONTHS } from "../constants";
 import { generateId, cn } from "../lib/utils";
@@ -71,11 +71,51 @@ export function ScheduleManager({
       (s) => s.month === selectedMonth && s.year === selectedYear,
     );
     if (existing) {
-      setActiveSchedule(existing);
+      let needsUpdate = false;
+      const start = startOfMonth(new Date(existing.year, existing.month));
+      const end = endOfMonth(start);
+      const allDays = eachDayOfInterval({ start, end });
+
+      const updatedClasses = existing.classes.map(classSchedule => {
+        const classInfo = classes.find(c => c.id === classSchedule.classId);
+        if (!classInfo) return classSchedule;
+
+        const expectedDates = allDays.filter(date => getDay(date) === classInfo.dayOfWeek);
+        const currentDates = classSchedule.entries.map(e => new Date(e.date));
+        
+        const isMismatch = currentDates.some(d => getDay(d) !== classInfo.dayOfWeek) || currentDates.length !== expectedDates.length;
+
+        if (isMismatch) {
+          needsUpdate = true;
+          const newEntries = expectedDates.map((date, index) => {
+            const oldEntry = classSchedule.entries[index];
+            return {
+              id: generateId(),
+              date: date.toISOString(),
+              teacherId: oldEntry ? oldEntry.teacherId : null,
+            };
+          });
+          return { ...classSchedule, entries: newEntries };
+        }
+        return classSchedule;
+      });
+
+      if (needsUpdate) {
+        const updatedSchedule = { ...existing, classes: updatedClasses };
+        setActiveSchedule(updatedSchedule);
+        onSave(updatedSchedule);
+      } else {
+        setActiveSchedule(existing);
+      }
     } else {
       setActiveSchedule(null);
     }
   };
+
+  useEffect(() => {
+    loadSchedule();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedSchedules, selectedMonth, selectedYear, classes]);
 
   const generateNewSchedule = () => {
     const start = startOfMonth(new Date(selectedYear, selectedMonth));
@@ -96,8 +136,7 @@ export function ScheduleManager({
           (s.year === selectedYear && s.month < selectedMonth),
       );
 
-    const activeClassesForNewSchedule = classes.filter(c => c.isActive);
-    const newClasses: ClassSchedule[] = activeClassesForNewSchedule.map((classInfo) => {
+    const newClasses: ClassSchedule[] = classes.map((classInfo) => {
       const classTeachers = teachers.filter((t) => t.classId === classInfo.id);
 
       const classDates = allDays.filter(
@@ -236,7 +275,7 @@ export function ScheduleManager({
   const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
   const currentWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-  const currentWeekLessons = savedSchedules.flatMap(s => 
+  const currentWeekLessons = savedSchedules.flatMap(s =>
     s.classes.flatMap(c => {
       const classInfo = classes.find(cls => cls.id === c.classId);
       return c.entries.map((entry, index) => ({
@@ -263,7 +302,7 @@ export function ScheduleManager({
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-20">
-      
+
       {/* PREVIEW DA SEMANA ATUAL */}
       <div className="bg-gradient-to-br from-brand-navy to-indigo-900 p-6 rounded-xl shadow-lg text-white mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-4">
@@ -282,7 +321,7 @@ export function ScheduleManager({
           <Calendar className="w-6 h-6 text-emerald-400" />
           Escala desta Semana ({format(currentWeekStart, 'dd/MM')} a {format(currentWeekEnd, 'dd/MM')})
         </h2>
-        
+
         {currentWeekLessons.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {currentWeekLessons.map(lesson => {
@@ -437,90 +476,90 @@ export function ScheduleManager({
             </h3>
           </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {classes.filter(c => c.isActive || activeSchedule.classes.some(ac => ac.classId === c.id)).map((classInfo) => {
-                const classSchedule = activeSchedule.classes.find(
-                  (c) => c.classId === classInfo.id,
-                );
-                if (!classSchedule || classSchedule.entries.length === 0)
-                  return null;
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {classes.map((classInfo) => {
+              const classSchedule = activeSchedule.classes.find(
+                (c) => c.classId === classInfo.id,
+              );
+              if (!classSchedule || classSchedule.entries.length === 0)
+                return null;
 
-                const classTeachers = teachers.filter(
-                  (t) => t.classId === classInfo.id,
-                );
+              const classTeachers = teachers.filter(
+                (t) => t.classId === classInfo.id,
+              );
 
-                return (
+              return (
+                <div
+                  key={classInfo.id}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                >
                   <div
-                    key={classInfo.id}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                    className={cn(
+                      "px-5 py-3 border-b flex justify-between items-center bg-emerald-50 border-emerald-100"
+                    )}
                   >
-                    <div
-                      className={cn(
-                        "px-5 py-3 border-b flex justify-between items-center bg-emerald-50 border-emerald-100"
-                      )}
-                    >
-                      <h4 className={cn("font-medium text-emerald-700")}>
-                        {classInfo.name}
-                      </h4>
-                      <span className="text-sm opacity-75 font-medium">
-                        {classSchedule.entries.length} aulas
-                      </span>
-                    </div>
-
-                    <div className="divide-y divide-gray-50 p-2">
-                      {classSchedule.entries.map((entry) => {
-                        const dateObj = new Date(entry.date);
-                        return (
-                          <div
-                            key={entry.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-3 hover:bg-gray-50 rounded-lg transition-colors"
-                          >
-                            <div className="font-medium text-gray-700 flex items-center gap-2">
-                              <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600 font-bold border border-gray-200">
-                                {format(dateObj, "dd")}
-                              </span>
-                              <span className="text-sm capitalize text-gray-500">
-                                {format(dateObj, "EEEE", { locale: ptBR })}
-                              </span>
-                            </div>
-
-                            <div className="sm:w-64">
-                              {userRole === "TEACHER" ? (
-                                <div className="w-full px-3 py-2 font-bold text-gray-700 text-sm border border-transparent">
-                                  {entry.teacherId ? (classTeachers.find(t => t.id === entry.teacherId)?.name || "") : "--"}
-                                </div>
-                              ) : (
-                                <div className="relative">
-                                  <select
-                                    value={entry.teacherId || "none"}
-                                    onChange={(e) => {
-                                      updateEntryTeacher(classInfo.id, entry.id, e.target.value);
-                                    }}
-                                    className="w-full rounded-lg border px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm font-medium border-gray-200 text-gray-800 appearance-none"
-                                  >
-                                    <option value="none">-- A definir --</option>
-                                    {classTeachers.map((t) => (
-                                      <option key={t.id} value={t.id}>
-                                        {t.name}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <h4 className={cn("font-medium text-emerald-700")}>
+                      {classInfo.name}
+                    </h4>
+                    <span className="text-sm opacity-75 font-medium">
+                      {classSchedule.entries.length} aulas
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+
+                  <div className="divide-y divide-gray-50 p-2">
+                    {classSchedule.entries.map((entry) => {
+                      const dateObj = new Date(entry.date);
+                      return (
+                        <div
+                          key={entry.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-3 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          <div className="font-medium text-gray-700 flex items-center gap-2">
+                            <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600 font-bold border border-gray-200">
+                              {format(dateObj, "dd")}
+                            </span>
+                            <span className="text-sm capitalize text-gray-500">
+                              {format(dateObj, "EEEE", { locale: ptBR })}
+                            </span>
+                          </div>
+
+                          <div className="sm:w-64">
+                            {userRole === "TEACHER" ? (
+                              <div className="w-full px-3 py-2 font-bold text-gray-700 text-sm border border-transparent">
+                                {entry.teacherId ? (classTeachers.find(t => t.id === entry.teacherId)?.name || "") : "--"}
+                              </div>
+                            ) : (
+                              <div className="relative">
+                                <select
+                                  value={entry.teacherId || "none"}
+                                  onChange={(e) => {
+                                    updateEntryTeacher(classInfo.id, entry.id, e.target.value);
+                                  }}
+                                  className="w-full rounded-lg border px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm font-medium border-gray-200 text-gray-800 appearance-none"
+                                >
+                                  <option value="none">-- A definir --</option>
+                                  {classTeachers.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -567,7 +606,7 @@ export function ScheduleManager({
             </div>
 
             <div className="grid grid-cols-2 gap-8">
-              {classes.filter(c => c.isActive || activeSchedule.classes.some(ac => ac.classId === c.id)).map((classInfo) => {
+              {classes.map((classInfo) => {
                 const classSchedule = activeSchedule.classes.find(
                   (c) => c.classId === classInfo.id,
                 );
@@ -613,7 +652,7 @@ export function ScheduleManager({
                             className={cn(
                               "flex flex-row items-center py-4",
                               !isLast &&
-                                "border-b border-dashed border-gray-200",
+                              "border-b border-dashed border-gray-200",
                             )}
                           >
                             <div className="flex flex-col items-center justify-center w-16 mr-4 shrink-0">
@@ -701,7 +740,7 @@ export function ScheduleManager({
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="flex-1 flex items-center justify-end gap-6">
                       <div className="text-sm font-bold text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200">
                         {lesson.lessonNumber}ª Aula
@@ -716,10 +755,6 @@ export function ScheduleManager({
                   </div>
                 );
               })}
-            </div>
-            
-            <div className="mt-12 text-center text-sm font-medium text-gray-400">
-              Escala gerada automaticamente pelo sistema CIAS.
             </div>
           </div>
         </div>

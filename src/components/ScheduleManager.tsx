@@ -304,23 +304,23 @@ export function ScheduleManager({
     <div className="space-y-6 max-w-5xl mx-auto pb-20">
 
       {/* PREVIEW DA SEMANA ATUAL */}
-      <div className="bg-gradient-to-br from-brand-navy to-indigo-900 p-6 rounded-xl shadow-lg text-white mb-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-4">
+      <div className="bg-gradient-to-br from-brand-navy to-indigo-900 p-6 rounded-xl shadow-lg text-white mb-8 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-xl font-bold flex items-center gap-2 w-full sm:w-auto">
+            <Calendar className="w-6 h-6 text-emerald-400 shrink-0" />
+            <span>Escala desta Semana ({format(currentWeekStart, 'dd/MM')} a {format(currentWeekEnd, 'dd/MM')})</span>
+          </h2>
           {currentWeekLessons.length > 0 && (
             <button
               onClick={generateWeeklyImage}
               disabled={isExportingWeekly}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg font-medium transition-colors text-sm disabled:opacity-50"
+              className="flex items-center justify-center sm:w-auto gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg font-medium transition-colors text-sm disabled:opacity-50 shrink-0"
             >
               {isExportingWeekly ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               {isExportingWeekly ? "Gerando..." : "Exportar"}
             </button>
           )}
         </div>
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2 w-full sm:w-auto">
-          <Calendar className="w-6 h-6 text-emerald-400" />
-          Escala desta Semana ({format(currentWeekStart, 'dd/MM')} a {format(currentWeekEnd, 'dd/MM')})
-        </h2>
 
         {currentWeekLessons.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

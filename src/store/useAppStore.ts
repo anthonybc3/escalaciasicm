@@ -176,12 +176,22 @@ export function useAppStore() {
     return { success: true };
   };
   const deleteChurch = async (id: string) => {
+    // Exclui primeiro as dependências no banco para evitar erro de Foreign Key
+    await supabase.from('monthly_schedules').delete().eq('church_id', id);
+    await supabase.from('teachers').delete().eq('church_id', id);
+    await supabase.from('classes').delete().eq('church_id', id);
+
+    const { error } = await supabase.from('churches').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting church:", error);
+      alert("Erro ao excluir igreja. Atualize a página e tente novamente.");
+      return;
+    }
+
     setChurches(prev => prev.filter(c => c.id !== id));
     setTeachers(prev => prev.filter(t => t.churchId !== id));
     setClasses(prev => prev.filter(c => c.churchId !== id));
     setSchedules(prev => prev.filter(s => s.churchId !== id));
-    const { error } = await supabase.from('churches').delete().eq('id', id);
-    if (error) console.error("Error deleting church:", error);
   };
 
   // Teachers API

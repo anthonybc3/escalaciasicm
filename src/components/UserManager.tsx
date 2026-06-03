@@ -77,7 +77,32 @@ export function UserManager({ appStore }: Props) {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5 text-gray-600">
                       <Building2 className="w-4 h-4 text-gray-400" />
-                      {getChurchName(user.churchId)}
+                      {isAdmin && user.id !== currentUser?.id ? (
+                        <select
+                          value={user.churchId || ''}
+                          onChange={(e) => {
+                            const newChurchId = e.target.value || null;
+                            updateUser({ 
+                              ...user, 
+                              churchId: newChurchId,
+                              // Se for gestor, garante que a igreja principal esteja na lista de gerenciadas
+                              managedChurchIds: newChurchId && user.role === 'MANAGER' 
+                                ? Array.from(new Set([...(user.managedChurchIds || []), newChurchId]))
+                                : user.managedChurchIds
+                            });
+                          }}
+                          className="bg-white border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-brand-navy focus:border-brand-navy block p-1.5 w-48"
+                        >
+                          <option value="">Sem Igreja</option>
+                          {churches.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        getChurchName(user.churchId)
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">

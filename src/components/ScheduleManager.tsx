@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
-import { Teacher, ClassConfig, MonthlySchedule, ClassSchedule, ClassId } from "../types";
-import { CLASSES, MONTHS } from "../constants";
+import { Teacher, Class, MonthlySchedule, ClassSchedule } from "../types";
+import { DAYS_OF_WEEK, MONTHS } from "../constants";
 import { generateId, cn } from "../lib/utils";
 import {
   format,
@@ -24,10 +24,10 @@ import {
 
 interface Props {
   teachers: Teacher[];
-  classConfigs: ClassConfig[];
+  classes: Class[];
   savedSchedules: MonthlySchedule[];
   onSave: (schedule: MonthlySchedule) => void;
-  onAddTeacher?: (name: string, classId: ClassId) => string | null;
+  onAddTeacher?: (name: string, classId: string) => string | null;
   churchName: string;
   churchLogo: string | null;
   ciasLogo: string | null;
@@ -37,7 +37,7 @@ interface Props {
 
 export function ScheduleManager({
   teachers,
-  classConfigs,
+  classes,
   savedSchedules,
   onSave,
   onAddTeacher,
@@ -96,14 +96,12 @@ export function ScheduleManager({
           (s.year === selectedYear && s.month < selectedMonth),
       );
 
-    const newClasses: ClassSchedule[] = CLASSES.map((classInfo) => {
-      const config = classConfigs.find((c) => c.classId === classInfo.id) || {
-        dayOfWeek: 0,
-      };
+    const activeClassesForNewSchedule = classes.filter(c => c.isActive);
+    const newClasses: ClassSchedule[] = activeClassesForNewSchedule.map((classInfo) => {
       const classTeachers = teachers.filter((t) => t.classId === classInfo.id);
 
       const classDates = allDays.filter(
-        (date) => getDay(date) === config.dayOfWeek,
+        (date) => getDay(date) === classInfo.dayOfWeek,
       );
 
       let startingIndex = 0;
@@ -240,13 +238,13 @@ export function ScheduleManager({
 
   const currentWeekLessons = savedSchedules.flatMap(s => 
     s.classes.flatMap(c => {
-      const classInfo = CLASSES.find(cls => cls.id === c.classId);
+      const classInfo = classes.find(cls => cls.id === c.classId);
       return c.entries.map((entry, index) => ({
         id: entry.id,
         classId: c.classId,
         className: classInfo?.name || '',
-        classColor: classInfo?.color || '',
-        classTextColor: classInfo?.textColor || '',
+        classColor: 'bg-emerald-50 border-emerald-100', // Default styling since dynamic classes don't have custom colors
+        classTextColor: 'text-emerald-700',
         teacherId: entry.teacherId,
         date: new Date(entry.date),
         lessonNumber: index + 1
@@ -439,8 +437,8 @@ export function ScheduleManager({
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {CLASSES.map((classInfo) => {
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {classes.filter(c => c.isActive || activeSchedule.classes.some(ac => ac.classId === c.id)).map((classInfo) => {
                 const classSchedule = activeSchedule.classes.find(
                   (c) => c.classId === classInfo.id,
                 );
@@ -458,11 +456,10 @@ export function ScheduleManager({
                   >
                     <div
                       className={cn(
-                        "px-5 py-3 border-b flex justify-between items-center",
-                        classInfo.color,
+                        "px-5 py-3 border-b flex justify-between items-center bg-emerald-50 border-emerald-100"
                       )}
                     >
-                      <h4 className={cn("font-medium", classInfo.textColor)}>
+                      <h4 className={cn("font-medium text-emerald-700")}>
                         {classInfo.name}
                       </h4>
                       <span className="text-sm opacity-75 font-medium">
@@ -570,7 +567,7 @@ export function ScheduleManager({
             </div>
 
             <div className="grid grid-cols-2 gap-8">
-              {CLASSES.map((classInfo) => {
+              {classes.filter(c => c.isActive || activeSchedule.classes.some(ac => ac.classId === c.id)).map((classInfo) => {
                 const classSchedule = activeSchedule.classes.find(
                   (c) => c.classId === classInfo.id,
                 );
@@ -585,22 +582,20 @@ export function ScheduleManager({
                   >
                     <div
                       className={cn(
-                        "px-6 py-4 border-b flex flex-col",
-                        classInfo.color,
+                        "px-6 py-4 border-b flex flex-col bg-emerald-50 border-emerald-100"
                       )}
                     >
                       <h3
-                        className={cn("text-xl font-bold", classInfo.textColor)}
+                        className={cn("text-xl font-bold text-emerald-700")}
                       >
                         {classInfo.name}
                       </h3>
                       <p
                         className={cn(
-                          "text-sm opacity-80",
-                          classInfo.textColor,
+                          "text-sm opacity-80 text-emerald-700"
                         )}
                       >
-                        {classInfo.description}
+                        Aulas às {DAYS_OF_WEEK.find(d => d.value === classInfo.dayOfWeek)?.label}
                       </p>
                     </div>
 

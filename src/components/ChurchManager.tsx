@@ -3,13 +3,14 @@ import { Church } from '../types';
 import { Plus, Trash2, Edit2, Check, X, Building2, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { TeacherManager } from './TeacherManager';
+import { ClassManager } from './ClassManager';
 
 interface Props {
   appStore: ReturnType<typeof useAppStore>;
 }
 
 export function ChurchManager({ appStore }: Props) {
-  const { churches, addChurch, updateChurch, deleteChurch, currentUser, teachers, addTeacher, updateTeacher, removeTeacher } = appStore;
+  const { churches, addChurch, updateChurch, deleteChurch, currentUser, teachers, addTeacher, updateTeacher, removeTeacher, classes, addClass, updateClass, removeClass } = appStore;
   
   const isAdmin = currentUser?.role === 'ADMIN';
   const visibleChurches = isAdmin 
@@ -21,6 +22,7 @@ export function ChurchManager({ appStore }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activeTabs, setActiveTabs] = useState<Record<string, 'classes' | 'teachers'>>({});
 
   const handleAdd = async () => {
     if (!newChurchName.trim()) return;
@@ -124,6 +126,7 @@ export function ChurchManager({ appStore }: Props) {
 
               {visibleChurches.map((church) => {
                 const churchTeachers = teachers.filter(t => t.churchId === church.id);
+                const churchClasses = classes.filter(c => c.churchId === church.id);
                 const isExpanded = expandedId === church.id;
 
                 return (
@@ -203,12 +206,45 @@ export function ChurchManager({ appStore }: Props) {
                       <tr>
                         <td colSpan={isAdmin ? 3 : 2} className="p-0 border-b border-gray-200">
                           <div className="bg-gray-50/50 p-6 border-t border-gray-100 shadow-inner">
-                            <TeacherManager 
-                              teachers={churchTeachers}
-                              onAdd={(t) => addTeacher({ ...t, churchId: church.id })}
-                              onUpdate={(t) => updateTeacher({ ...t, churchId: church.id })}
-                              onRemove={removeTeacher}
-                            />
+                            <div className="flex gap-4 mb-6 border-b border-gray-200">
+                              <button
+                                onClick={() => setActiveTabs(prev => ({ ...prev, [church.id]: 'classes' }))}
+                                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+                                  (activeTabs[church.id] || 'classes') === 'classes'
+                                    ? 'border-brand-navy text-brand-navy'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                              >
+                                Classes
+                              </button>
+                              <button
+                                onClick={() => setActiveTabs(prev => ({ ...prev, [church.id]: 'teachers' }))}
+                                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+                                  activeTabs[church.id] === 'teachers'
+                                    ? 'border-brand-navy text-brand-navy'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                              >
+                                Professoras
+                              </button>
+                            </div>
+
+                            {(activeTabs[church.id] || 'classes') === 'classes' ? (
+                              <ClassManager 
+                                classes={churchClasses}
+                                onAdd={(c) => addClass({ ...c, churchId: church.id })}
+                                onUpdate={(c) => updateClass({ ...c, churchId: church.id })}
+                                onRemove={removeClass}
+                              />
+                            ) : (
+                              <TeacherManager 
+                                teachers={churchTeachers}
+                                classes={churchClasses}
+                                onAdd={(t) => addTeacher({ ...t, churchId: church.id })}
+                                onUpdate={(t) => updateTeacher({ ...t, churchId: church.id })}
+                                onRemove={removeTeacher}
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>

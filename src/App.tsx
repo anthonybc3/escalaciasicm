@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAppStore } from "./store/useAppStore";
 import { TeacherManager } from "./components/TeacherManager";
-import { ClassManager } from "./components/ClassManager";
+
 import { ScheduleManager } from "./components/ScheduleManager";
 import { Login } from "./components/Login";
 import { Users, Calendar, Settings, CalendarDays, LogOut, Shield, UserCircle, Building2 } from "lucide-react";
@@ -15,7 +15,7 @@ export default function App() {
   const isPublicView = !!publicChurchId;
 
   const [activeTab, setActiveTab] = useState<
-    "schedule" | "teachers" | "classes" | "users" | "profile" | "churches"
+    "schedule" | "users" | "profile" | "churches"
   >("schedule");
 
   const appStore = useAppStore();
@@ -62,7 +62,7 @@ export default function App() {
   const displayChurchName = currentChurch?.name || churchName;
 
   const churchTeachers = appStore.teachers.filter(t => t.churchId === effectiveChurchId);
-  const churchClassConfigs = appStore.classConfigs.filter(c => c.churchId === effectiveChurchId);
+  const churchClasses = appStore.classes.filter(c => c.churchId === effectiveChurchId);
   const churchSchedules = appStore.schedules.filter(s => s.churchId === effectiveChurchId);
 
   const isTeacher = currentUser?.role === "TEACHER" || isPublicView;
@@ -139,19 +139,6 @@ export default function App() {
 
 
 
-            {!isPublicView && (isAdmin || isManager) && (
-              <button
-                onClick={() => setActiveTab("classes")}
-                className={`flex items-center gap-2 px-5 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === "classes"
-                    ? "border-brand-navy text-brand-navy bg-brand-navy/5"
-                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-                }`}
-              >
-                <Settings className="w-4 h-4" />
-                Configurar Classes
-              </button>
-            )}
 
             {!isPublicView && (isAdmin || isManager) && (
               <button
@@ -202,7 +189,7 @@ export default function App() {
         {activeTab === "schedule" && (
           <ScheduleManager
             teachers={churchTeachers}
-            classConfigs={churchClassConfigs}
+            classes={churchClasses}
             savedSchedules={churchSchedules}
             onSave={(schedule) => {
               if (currentChurchId) {
@@ -226,19 +213,7 @@ export default function App() {
         )}
 
 
-        {!isPublicView && activeTab === "classes" && (
-          <ClassManager
-            configs={churchClassConfigs}
-            onUpdateConfig={(c, d) => currentChurchId && appStore.updateClassConfig(c, d, currentChurchId)}
-            churchName={displayChurchName}
-            setChurchName={(name) => {
-              if (currentChurch) {
-                appStore.updateChurch({ ...currentChurch, name });
-              }
-              setChurchName(name);
-            }}
-          />
-        )}
+
 
         {!isPublicView && activeTab === "users" && (
           <UserManager appStore={appStore} />

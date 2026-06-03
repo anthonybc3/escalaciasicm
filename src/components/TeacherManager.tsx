@@ -1,25 +1,25 @@
 import { useState } from "react";
-import { Teacher, ClassId } from "../types";
+import { Teacher, Class } from "../types";
 import { generateId } from "../lib/utils";
-import { CLASSES } from "../constants";
 import { Trash2, Edit2, Plus, UserPlus } from "lucide-react";
 
 interface Props {
   teachers: Teacher[];
+  classes: Class[];
   onAdd: (teacher: Omit<Teacher, 'churchId'>) => void;
   onUpdate: (teacher: Omit<Teacher, 'churchId'>) => void;
   onRemove: (id: string) => void;
 }
 
-export function TeacherManager({ teachers, onAdd, onUpdate, onRemove }: Props) {
+export function TeacherManager({ teachers, classes, onAdd, onUpdate, onRemove }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
-  const [classId, setClassId] = useState<ClassId>("bebes");
+  const [classId, setClassId] = useState<string>(classes[0]?.id || "");
 
   const handleSave = () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !classId) return;
 
     if (editingId) {
       onUpdate({ id: editingId, name: name.trim(), classId });
@@ -29,7 +29,7 @@ export function TeacherManager({ teachers, onAdd, onUpdate, onRemove }: Props) {
       setIsAdding(false);
     }
     setName("");
-    setClassId("bebes");
+    setClassId(classes[0]?.id || "");
   };
 
   const handleEdit = (teacher: Teacher) => {
@@ -43,13 +43,21 @@ export function TeacherManager({ teachers, onAdd, onUpdate, onRemove }: Props) {
     setIsAdding(false);
     setEditingId(null);
     setName("");
-    setClassId("bebes");
+    setClassId(classes[0]?.id || "");
   };
 
-  const teachersByClass = CLASSES.map((c) => ({
+  const teachersByClass = classes.map((c) => ({
     ...c,
     teachers: teachers.filter((t) => t.classId === c.id),
   }));
+
+  if (classes.length === 0) {
+    return (
+      <div className="p-6 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-100">
+        Nenhuma classe cadastrada para esta igreja. Crie uma classe primeiro na aba "Classes".
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -104,10 +112,10 @@ export function TeacherManager({ teachers, onAdd, onUpdate, onRemove }: Props) {
               </label>
               <select
                 value={classId}
-                onChange={(e) => setClassId(e.target.value as ClassId)}
+                onChange={(e) => setClassId(e.target.value)}
                 className="w-full rounded-lg border-indigo-200 border px-4 py-2 focus:ring-2 focus:ring-brand-navy focus:border-brand-navy outline-none bg-white transition-all"
               >
-                {CLASSES.map((c) => (
+                {classes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -118,13 +126,13 @@ export function TeacherManager({ teachers, onAdd, onUpdate, onRemove }: Props) {
           <div className="flex gap-3 justify-end pt-2">
             <button
               onClick={handleCancel}
-              className="px-4 py-2 text-brand-navy hover:bg-brand-gray rounded-lg font-medium transition-colors"
+              className="px-4 py-2 text-brand-navy hover:bg-gray-200 rounded-lg font-medium transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={handleSave}
-              disabled={!name.trim()}
+              disabled={!name.trim() || !classId}
               className="px-6 py-2 bg-brand-navy hover:bg-brand-darknavy disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
             >
               Salvar
@@ -140,18 +148,15 @@ export function TeacherManager({ teachers, onAdd, onUpdate, onRemove }: Props) {
             className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:border-gray-200 transition-colors"
           >
             <div
-              className={`p-4 border-b ${group.color} flex justify-between items-center`}
+              className={`p-4 border-b bg-indigo-50 border-indigo-100 flex justify-between items-center`}
             >
               <div>
-                <h3 className={`font-semibold ${group.textColor}`}>
+                <h3 className={`font-semibold text-brand-navy`}>
                   {group.name}
                 </h3>
-                <p className={`text-xs opacity-75 ${group.textColor}`}>
-                  {group.description}
-                </p>
               </div>
               <span
-                className={`text-xs font-medium px-2.5 py-1 bg-white bg-opacity-50 rounded-full ${group.textColor}`}
+                className={`text-xs font-medium px-2.5 py-1 bg-white rounded-full text-brand-navy`}
               >
                 {group.teachers.length} cadastradas
               </span>

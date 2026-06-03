@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { Teacher, ClassConfig, MonthlySchedule, ClassId, User, Church } from "../types";
+import { Teacher, Class, MonthlySchedule, User, Church } from "../types";
 
 export function useAppStore() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -8,7 +8,7 @@ export function useAppStore() {
   const [users, setUsers] = useState<User[]>([]);
   const [churches, setChurches] = useState<Church[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [classConfigs, setClassConfigs] = useState<ClassConfig[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [schedules, setSchedules] = useState<MonthlySchedule[]>([]);
 
   const [churchName, setChurchName] = useState<string>("");
@@ -43,35 +43,7 @@ export function useAppStore() {
   };
 
   const loadCloudData = async () => {
-    // Sync logic (legacy data migration)
-    const syncLocal = async () => {
-      const migrated = localStorage.getItem("@escala-cias/migrated");
-      if (!migrated) {
-        // Migrate churches
-        const localChurches = JSON.parse(localStorage.getItem("@escala-cias/churches") || "[]");
-        for (const c of localChurches) {
-           await supabase.from('churches').upsert({ id: c.id, name: c.name });
-        }
-        // Migrate teachers
-        const localTeachers = JSON.parse(localStorage.getItem("@escala-cias/teachers") || "[]");
-        for (const t of localTeachers) {
-           await supabase.from('teachers').upsert({ id: t.id, name: t.name, class_id: t.classId, church_id: t.churchId });
-        }
-        // Migrate configs
-        const localConfigs = JSON.parse(localStorage.getItem("@escala-cias/configs") || "[]");
-        for (const c of localConfigs) {
-           await supabase.from('class_configs').upsert({ class_id: c.classId, day_of_week: c.dayOfWeek, church_id: c.churchId });
-        }
-        // Migrate schedules
-        const localSchedules = JSON.parse(localStorage.getItem("@escala-cias/schedules") || "[]");
-        for (const s of localSchedules) {
-           await supabase.from('monthly_schedules').upsert({ id: s.id, month: s.month, year: s.year, church_id: s.churchId, classes: s.classes });
-        }
-        localStorage.setItem("@escala-cias/migrated", "true");
-      }
-    };
-    
-    await syncLocal();
+
 
     // Fetch Users
     const { data: usersData, error: uErr } = await supabase.from('profiles').select('*');
@@ -92,10 +64,10 @@ export function useAppStore() {
     if (tErr) console.error("teachers fetch error", tErr);
     if (teachersData) setTeachers(teachersData.map(t => ({ id: t.id, name: t.name, classId: t.class_id, churchId: t.church_id })));
 
-    // Fetch Configs
-    const { data: configsData, error: confErr } = await supabase.from('class_configs').select('*');
-    if (confErr) console.error("configs fetch error", confErr);
-    if (configsData) setClassConfigs(configsData.map(c => ({ classId: c.class_id, dayOfWeek: c.day_of_week, churchId: c.church_id } as ClassConfig)));
+    // Fetch Classes
+    const { data: classesData, error: clErr } = await supabase.from('classes').select('*');
+    if (clErr) console.error("classes fetch error", clErr);
+    if (classesData) setClasses(classesData.map(c => ({ id: c.id, churchId: c.church_id, name: c.name, dayOfWeek: c.day_of_week, isActive: c.is_active } as Class)));
 
     // Fetch Schedules
     const { data: schedulesData, error: sErr } = await supabase.from('monthly_schedules').select('*');
@@ -142,8 +114,7 @@ export function useAppStore() {
 
   // Churches API
   const addChurch = async (church: Church) => {
-    // Check locally first
-    const exists = get().churches.some(c => c.name.toLowerCase() === church.name.toLowerCase());
+    const exists = churches.some(c => c.name.toLowerCase() === church.name.toLowerCase());
     if (exists) {
       return { success: false, error: 'Já existe uma igreja com este nome.' };
     }
@@ -162,8 +133,7 @@ export function useAppStore() {
     return { success: true };
   };
   const updateChurch = async (updated: Church) => {
-    // Check locally first (excluding self)
-    const exists = get().churches.some(c => c.id !== updated.id && c.name.toLowerCase() === updated.name.toLowerCase());
+    const exists = churches.some(c => c.id !== updated.id && c.name.toLowerCase() === updated.name.toLowerCase());
     if (exists) {
       return { success: false, error: 'Já existe uma igreja com este nome.' };
     }
@@ -183,7 +153,7 @@ export function useAppStore() {
   const deleteChurch = async (id: string) => {
     setChurches(prev => prev.filter(c => c.id !== id));
     setTeachers(prev => prev.filter(t => t.churchId !== id));
-    setClassConfigs(prev => prev.filter(c => c.churchId !== id));
+    setClasses(prev => prev.filter(c => c.churchId !== id));
     setSchedules(prev => prev.filter(s => s.churchId !== id));
     const { error } = await supabase.from('churches').delete().eq('id', id);
     if (error) console.error("Error deleting church:", error);
@@ -206,16 +176,22 @@ export function useAppStore() {
     if (error) console.error("Error removing teacher:", error);
   };
 
-  // Configs API
-  const updateClassConfig = async (classId: ClassId, dayOfWeek: number, churchId: string) => {
-    setClassConfigs((prev) => {
-      const existing = prev.find(c => c.classId === classId && c.churchId === churchId);
-      if (existing) {
-        return prev.map(c => c.classId === classId && c.churchId === churchId ? { ...c, dayOfWeek } : c);
-      }
-      return [...prev, { classId, dayOfWeek, churchId }];
-    });
-    await supabase.from('class_configs').upsert({ class_id: classId, day_of_week: dayOfWeek, church_id: churchId });
+  // Classes API
+  const addClass = async (c: Class) => {
+    setClasses((prev) => [...prev, c]);
+    const { error } = await supabase.from('classes').insert({ id: c.id, church_id: c.churchId, name: c.name, day_of_week: c.dayOfWeek, is_active: c.isActive });
+    if (error) console.error("Error adding class:", error);
+  };
+  const updateClass = async (updated: Class) => {
+    setClasses((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    const { error } = await supabase.from('classes').update({ name: updated.name, day_of_week: updated.dayOfWeek, is_active: updated.isActive }).eq('id', updated.id);
+    if (error) console.error("Error updating class:", error);
+  };
+  const removeClass = async (id: string) => {
+    setClasses((prev) => prev.filter((c) => c.id !== id));
+    setTeachers((prev) => prev.filter((t) => t.classId !== id)); // Cascades in state
+    const { error } = await supabase.from('classes').delete().eq('id', id);
+    if (error) console.error("Error removing class:", error);
   };
 
   // Schedules API
@@ -256,8 +232,10 @@ export function useAppStore() {
     addTeacher,
     updateTeacher,
     removeTeacher,
-    classConfigs,
-    updateClassConfig,
+    classes,
+    addClass,
+    updateClass,
+    removeClass,
     schedules,
     saveSchedule,
     deleteSchedule,

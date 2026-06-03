@@ -1,4 +1,4 @@
-export type ClassId = 'bebes' | 'criancas' | 'intermediarios' | 'adolescentes';
+// ClassId has been replaced by dynamic UUIDs from the classes table
 
 export type Role = 'ADMIN' | 'MANAGER' | 'TEACHER';
 export type UserStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -20,26 +20,22 @@ export interface User {
   status: UserStatus;
 }
 
-export interface ClassInfo {
-  id: ClassId;
+export interface Class {
+  id: string;
+  churchId: string;
   name: string;
-  description: string;
-  color: string;
-  textColor: string;
+  dayOfWeek: number;
+  isActive: boolean;
 }
 
 export interface Teacher {
   id: string;
   name: string;
-  classId: ClassId;
+  classId: string;
   churchId: string;
 }
 
-export interface ClassConfig {
-  classId: ClassId;
-  dayOfWeek: number; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  churchId: string;
-}
+
 
 export interface ScheduleEntry {
   id: string;
@@ -48,7 +44,7 @@ export interface ScheduleEntry {
 }
 
 export interface ClassSchedule {
-  classId: ClassId;
+  classId: string;
   entries: ScheduleEntry[];
 }
 

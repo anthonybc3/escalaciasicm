@@ -137,22 +137,7 @@ export default function App() {
               Escala Mensal
             </button>
 
-            {!isPublicView && (isAdmin || isManager) && (
-              <button
-                onClick={() => setActiveTab("teachers")}
-                className={`flex items-center gap-2 px-5 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === "teachers"
-                    ? "border-brand-navy text-brand-navy bg-brand-navy/5"
-                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-                }`}
-              >
-                <Users className="w-4 h-4" />
-                Professoras
-                <span className="ml-1 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs">
-                  {churchTeachers.length}
-                </span>
-              </button>
-            )}
+
 
             {!isPublicView && (isAdmin || isManager) && (
               <button
@@ -182,7 +167,7 @@ export default function App() {
               </button>
             )}
 
-            {!isPublicView && isAdmin && (
+            {!isPublicView && (isAdmin || isManager) && (
               <button
                 onClick={() => setActiveTab("churches")}
                 className={`flex items-center gap-2 px-5 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
@@ -240,14 +225,6 @@ export default function App() {
           />
         )}
 
-        {!isPublicView && activeTab === "teachers" && (
-          <TeacherManager
-            teachers={churchTeachers}
-            onAdd={(t) => currentChurchId && appStore.addTeacher({ ...t, churchId: currentChurchId })}
-            onUpdate={(t) => currentChurchId && appStore.updateTeacher({ ...t, churchId: currentChurchId })}
-            onRemove={appStore.removeTeacher}
-          />
-        )}
 
         {!isPublicView && activeTab === "classes" && (
           <ClassManager
@@ -271,8 +248,8 @@ export default function App() {
           <UserProfile appStore={appStore} />
         )}
 
-        {!isPublicView && activeTab === "churches" && isAdmin && (
-          <ChurchManager />
+        {!isPublicView && activeTab === "churches" && (isAdmin || isManager) && (
+          <ChurchManager appStore={appStore} />
         )}
       </main>
     </div>

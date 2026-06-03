@@ -13,6 +13,9 @@ export function ChurchManager({ appStore }: Props) {
   const { churches, addChurch, updateChurch, deleteChurch, currentUser, teachers, addTeacher, updateTeacher, removeTeacher, classes, addClass, updateClass, removeClass } = appStore;
   
   const isAdmin = currentUser?.role === 'ADMIN';
+  const isManager = currentUser?.role === 'MANAGER';
+  const canManageChurch = isAdmin || isManager;
+  
   const visibleChurches = isAdmin 
     ? churches 
     : churches.filter(c => currentUser?.managedChurchIds?.includes(c.id) || c.id === currentUser?.churchId);
@@ -26,14 +29,24 @@ export function ChurchManager({ appStore }: Props) {
 
   const handleAdd = async () => {
     if (!newChurchName.trim()) return;
+    const newChurchId = crypto.randomUUID();
     const result = await addChurch({
-      id: crypto.randomUUID(),
+      id: newChurchId,
       name: newChurchName.trim()
     });
     
     if (result && !result.success) {
       alert(result.error);
       return;
+    }
+
+    if (isManager && currentUser) {
+      const updatedUser = {
+        ...currentUser,
+        managedChurchIds: [...(currentUser.managedChurchIds || []), newChurchId]
+      };
+      await appStore.updateUser(updatedUser);
+      appStore.login(updatedUser); // Update local active session state
     }
 
     setNewChurchName('');
@@ -65,7 +78,7 @@ export function ChurchManager({ appStore }: Props) {
             Gerencie as igrejas e suas respectivas professoras.
           </p>
         </div>
-        {isAdmin && (
+        {canManageChurch && (
           <button
             onClick={() => setIsAdding(true)}
             className="flex items-center gap-2 px-4 py-2 bg-brand-navy text-white rounded-lg hover:bg-brand-darknavy transition-colors font-medium"
@@ -83,7 +96,7 @@ export function ChurchManager({ appStore }: Props) {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600">Nome da Igreja</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-600 text-center w-32">Professoras</th>
-                {isAdmin && <th className="px-6 py-4 text-sm font-semibold text-gray-600 text-right w-32">Ações</th>}
+                {canManageChurch && <th className="px-6 py-4 text-sm font-semibold text-gray-600 text-right w-32">Ações</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -156,7 +169,7 @@ export function ChurchManager({ appStore }: Props) {
                           {churchTeachers.length}
                         </span>
                       </td>
-                      {isAdmin && (
+                      {canManageChurch && (
                         <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                           {editingId === church.id ? (
                             <div className="flex justify-end gap-2">
@@ -204,7 +217,7 @@ export function ChurchManager({ appStore }: Props) {
                     </tr>
                     {isExpanded && (
                       <tr>
-                        <td colSpan={isAdmin ? 3 : 2} className="p-0 border-b border-gray-200">
+                        <td colSpan={canManageChurch ? 3 : 2} className="p-0 border-b border-gray-200">
                           <div className="bg-gray-50/50 p-6 border-t border-gray-100 shadow-inner">
                             <div className="flex gap-4 mb-6 border-b border-gray-200">
                               <button
@@ -255,7 +268,7 @@ export function ChurchManager({ appStore }: Props) {
 
               {visibleChurches.length === 0 && !isAdding && (
                 <tr>
-                  <td colSpan={isAdmin ? 3 : 2} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={canManageChurch ? 3 : 2} className="px-6 py-12 text-center text-gray-500">
                     Nenhuma igreja vinculada ou cadastrada.
                   </td>
                 </tr>

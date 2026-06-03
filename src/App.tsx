@@ -192,14 +192,14 @@ export default function App() {
             classes={churchClasses}
             savedSchedules={churchSchedules}
             onSave={(schedule) => {
-              if (currentChurchId) {
-                appStore.saveSchedule({ ...schedule, churchId: currentChurchId });
+              if (effectiveChurchId) {
+                appStore.saveSchedule({ ...schedule, churchId: effectiveChurchId });
               }
             }}
             onAddTeacher={(name, classId) => {
-               if (currentChurchId) {
+               if (effectiveChurchId) {
                  const id = "teacher-" + Date.now().toString() + Math.random().toString(36).substr(2, 5);
-                 appStore.addTeacher({ id, name, classId, churchId: currentChurchId });
+                 appStore.addTeacher({ id, name, classId, churchId: effectiveChurchId });
                  return id;
                }
                return null;
@@ -208,7 +208,7 @@ export default function App() {
             churchLogo={churchLogo}
             ciasLogo={ciasLogo}
             userRole={isPublicView ? 'TEACHER' : currentUser?.role || 'TEACHER'}
-            churchId={currentChurchId}
+            churchId={effectiveChurchId}
           />
         )}
 

@@ -76,7 +76,7 @@ export function ScheduleManager({
       const end = endOfMonth(start);
       const allDays = eachDayOfInterval({ start, end });
 
-      const updatedClasses = existing.classes.map(classSchedule => {
+      const updatedClasses = (existing.classes || []).map(classSchedule => {
         const classInfo = classes.find(c => c.id === classSchedule.classId);
         if (!classInfo) return classSchedule;
 
@@ -145,7 +145,7 @@ export function ScheduleManager({
 
       let startingIndex = 0;
       if (prevSchedule && classTeachers.length > 0) {
-        const prevClassSchedule = prevSchedule.classes.find(
+        const prevClassSchedule = prevSchedule.classes?.find(
           (c) => c.classId === classInfo.id,
         );
         if (prevClassSchedule && prevClassSchedule.entries.length > 0) {
